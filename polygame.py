@@ -25,13 +25,13 @@ class Stack(object):
         return self.stack[-1]
 
 #定义多边形类
-class PloygonAgent(object):
+class PolygonAgent(object):
     def __init__(self,n,m,op = [], v = []):
        
         super().__init__()
         self.__n = n              #多边形边数
 
-        self.__m =  m             #此位置定义一个三维数组存取    
+        self.__m = m             #此位置定义一个三维数组存取    
                                 #[][][] m; //m[i][n][1]：
                                 # 代表一开始删除第i条边，长度为n的链（包含n个顶点），
                                 # 所能得到的最大值
@@ -40,18 +40,18 @@ class PloygonAgent(object):
   
         self.__op = op            #每条边对应操作数
         self.__v = v              #每个顶点数值
-        self.__cut = [[[0] *(n+1)]*n+2]*2   #记录合并点的数组
+        self.__cut = np.zeros((n+1, n+1, 2))   #记录合并点的数组
         self.__bestScore = 0                #记录最优得分
         self.__firstDelEdge = 0             #记录最优情况下，第一条删除的边
                                             #此处定义一个栈(python实现方式)
         self.__stack = Stack()                   #用栈保存合并边的顺序
 
     def minMax(self,i,s,j,resDict):
-        r = (i+s-1) % self.n + 1
-        a = self.m[i][s][0]     #i->s 的链能取得的最小值        
-        b = self.m[i][s][1]     #i->s 的链能取得的最大值
-        c = self.m[r][j-s][0]   #->j-s 的链能取得的最小值
-        d = self.m[r][j-s][1]   #->j-s 的链能取得的最大值
+        r = (i+s-1) % self.__n + 1
+        a = self.__m[i][s][0]     #i->s 的链能取得的最小值        
+        b = self.__m[i][s][1]     #i->s 的链能取得的最大值
+        c = self.__m[r][j-s][0]   #->j-s 的链能取得的最小值
+        d = self.__m[r][j-s][1]   #->j-s 的链能取得的最大值
         if(self.__op[r] == '+'):
             #用字典实现HashMap
             resDict['minf'] = a+c
@@ -172,11 +172,97 @@ class PloygonAgent(object):
                 self.getBestSolution(i,s,True)
                 self.getBestSolution(r,j-s,True)
 
-    def showPolygon(self):
-        print("哈哈哈，我没开发，别打我。。")
+    def showPolygon(self, slen):
+        n = self.__n
+        v = self.__v
+        op = self.__op
+        arg = slen-2*n
         
-        pass
+        #第一行
+        for i in range(n):
+            if i != n-1:
+                print("{}--{}--".format(v[i+1], op[i+1]), end='')    
+            else:
+                print(v[n]) #最后一个变量值
+        
+        j = 6*(n-1)+arg #字符占位数
+        
+        #第二行
+        for i in range(j):
+            if (i==0 or i==j-1):
+                print('|', end = '')
+            else:
+                print(' ', end = '')
+        
+        print() #newline
+            
+        #第三行
+        for i in range(j):
+            
+            if (i==0 or i==j-1):
+                print(' ', end = '')
+            elif (i+1 < j/2 and i+2 > j/2):
+                print(op[n], end='')
+            else:
+                print('-', end='')
+                
+        print("\n") #newline
+        
+        ##print("哈哈哈，我没开发，别打我。。")
+        
 
 if __name__ == "__main__":
-    pass
+    n = int(input("Please ENTER value of n:\n")) #多边形的边数n
+    
+    #数组初始化
+    m = np.zeros((n+1, n+1, 2)) #type(m)), ndarray class
+    op = [''for i in range(n+1)]
+    val = [0 for i in range(n+1)]
+    
+    val_str = input("Please ENTER a value string starting with val \n") 
+    
+    str = list(val_str.split()) #字符串转化成list数组
+    str_len = len(val_str.replace(' ', '')) #计算去空格后的字符串len
+    
+    #print(val_str,str,str_len) #str_len
+    
+    for i in range(n):
+        op[i+1] = str[2*i] 
+        val[i+1] = int(str[2*i+1])
+    
+    #print(op, val) #打印op,val
+    
+    polygon = PolygonAgent(n, m, op, val)  #生成对象
+    print("\n\nPolygon:")  
+    polygon.showPolygon(str_len)
+    
+    '''
+    for i in range(1, n+1): #i value taken from 1 to n
+        m[i][1][0] = m[i][1][1] = val[i]
+        
+    result = polygon.polyMax()
+    print("BestScore=", result)
+    '''
+    print("hahaha")
 
+
+'''
+to 凌峰: 5/29
+写了main方法
+我把showpolygon方法写了，测试没问题了。
+但是，
+测试下添麟写的核心代码polyMax（）里面有问题，
+陷入死循环，估计翻译代码时候，有些bug。
+
+而且，不好意思，我没把你写的数据结构加上去，
+为了省时间，急着测下添麟的代码
+因为添麟的数据结构，直接抄CSDN那个数据结构，
+所以，好搞些。
+
+我大致看了你的数据结构，
+大概差不多，如果你有什么特别需求，
+可后期在这里修改下数据结构
+
+written by 子杰
+
+```
