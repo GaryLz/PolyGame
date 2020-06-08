@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import random
 
 # -*- coding: utf-8 -*-
 
@@ -45,9 +46,10 @@ class PolygonAgent(object):
         self.__firstDelEdge = 0             #记录最优情况下，第一条删除的边
                                             #此处定义一个栈(python实现方式)
         self.__stack = Stack()                   #用栈保存合并边的顺序
+        self.__memorystack = []             #记录每次走的情况
 
     def minMax(self,i,s,j,resDict):
-        r = (i+s-1) % self.__n + 1
+        r = (i+s-1) % self.__n + 1 
         a = self.__m[i][s][0]     #i->s 的链能取得的最小值        
         b = self.__m[i][s][1]     #i->s 的链能取得的最大值
         c = self.__m[r][j-s][0]   #->j-s 的链能取得的最小值
@@ -56,19 +58,20 @@ class PolygonAgent(object):
             #用字典实现HashMap
             resDict['minf'] = a+c
             resDict['maxf'] = b+d
-        else:
+        if(self.__op[r] == '*'):
             e = [0,a*c,a*d,b*c,b*d]
-            minf = e[1]
-            maxf = e[1]
-            k = 2
+            minf = e[0]
+            maxf = e[0]
+            k = 1
             while(k < 5):
                 if(minf > e[k]): 
                     minf = e[k]
                 if(maxf < e[k]):
                     maxf = e[k]
-                ++k
+                k+=1
             resDict['minf'] = minf
             resDict['maxf'] = maxf 
+        #print(resDict)
         return resDict
 
     #获取多边形的最高得分
@@ -78,7 +81,7 @@ class PolygonAgent(object):
         for j in range(2,n + 1):
             for i in range(1, n +1):
                 self.__m[i][j][0] = sys.maxsize             #取得python整型最大值
-                self.__m[i][j][1] = -sys.maxsize - 1        #取得python整型最小值
+                self.__m[i][j][1] = -sys.maxsize            #取得python整型最小值
                 for s in range(1, j):
                     resDict = self.minMax(i,s,j,resDict)
                     if(self.__m[i][j][0] > resDict['minf']):
@@ -87,23 +90,24 @@ class PolygonAgent(object):
                     if(self.__m[i][j][1] < resDict['maxf']):
                         self.__m[i][j][1] = resDict['maxf']
                         self.__cut[i][j][1] = s            #记录该链取得最大值得断点
-            
+    
         self.__bestScore = self.__m[1][n][1]
         self.__firstDelEdge = 1                     #一开始删除的边，默认为第一条边
         
         for i in range(2,n + 1):
-            if(self.__bestScore < self.__m[i][n][i]):
+            if(self.__bestScore < self.__m[i][n][1]):
                 self.__bestScore = self.__m[i][n][1]
                 self.__firstDelEdge = i         #如果一开始删除第i边有更优结果，则更新
         for i in range(1,n + 1):
-            print("i= %d  %d",i,self.__m[i][n][1])
+            print("i=",i,self.__m[i][n][1])
         print("firstDelEdge= ",self.__firstDelEdge)
         self.getBestSolution(self.__firstDelEdge,self.__n,True)
         while(self.__stack.is_empty()):
-            str_list = "".join(self.__stack.pop())
-            print("stack--> ",str_list)
+            top = int(self.__stack.top())
+            self.__stack.pop()
+            print("stack--> ",top)
             
-        return self.__bestScore
+        return int(self.__bestScore)
 
     #获取最优的合并序列，存入stack中
     #@parm i 指子链从哪个顶点开始4
@@ -114,6 +118,7 @@ class PolygonAgent(object):
         r = 0
         n = self.__n
         m = self.__m
+        j = int(j)
         #如果只有1个顶点，直接返回
         if(j == 1):
             return
@@ -129,9 +134,9 @@ class PolygonAgent(object):
             s = self.__cut[i][j][1]
         else:
             s = self.__cut[i][j][0]
-        pass
         
         r = (i+s-1) % n + 1 
+        r = int(r)
         self.__stack.push(r)
         if(self.__op[r] == '+'):
             if(needMax): #如果合并得到的父链需要取得最大值
@@ -141,15 +146,16 @@ class PolygonAgent(object):
                 self.getBestSolution(i,s,False)
                 self.getBestSolution(r,j-s,False)
         else:
+            s=int(s)
             a = m[i][s][0]
             b = m[i][s][1]
             c = m[r][j-s][0]
             d = m[r][j-s][1]
             e = [0,a*c,a*d,b*c,b*d] #最大最小值的数组
-            mergeMax = e[1]
-            mergeMin = e[1]
+            mergeMax = e[0]
+            mergeMin = e[0]
             merge = 0
-            for k in range(2,5):
+            for k in range(1,5):
                 if(e[k] > mergeMax):
                     mergeMax = e[k]
                 if(e[k] < mergeMin):
@@ -172,18 +178,33 @@ class PolygonAgent(object):
                 self.getBestSolution(i,s,True)
                 self.getBestSolution(r,j-s,True)
 
+    def showList(self,opt = [],val = []):
+        n = len(val)
+        track = ""
+        for i in range(1,n):
+            print(val[i],end = ' ')
+            track = track + str(val[i])
+            if i != n-1:
+                print(opt[i],end = ' ')
+                track = track + " "+opt[i]+" "
+        self.__memorystack.append(track)
+        print('\n')
+            
+
     def showPolygon(self, slen):
         n = self.__n
         v = self.__v
         op = self.__op
-        arg = slen-2*n
+        arg = slen
         
         #第一行
         for i in range(n):
             if i != n-1:
-                print("{}--{}--".format(v[i+1], op[i+1]), end='')    
+                print("|{}|--{}--".format(v[i+1], op[i+2]), end='')    
             else:
-                print(v[n]) #最后一个变量值
+                print("|",end= '')
+                print(v[n],end='') #最后一个变量值
+                print("|")
         
         j = 6*(n-1)+arg #字符占位数
         
@@ -201,68 +222,121 @@ class PolygonAgent(object):
             
             if (i==0 or i==j-1):
                 print(' ', end = '')
-            elif (i+1 < j/2 and i+2 > j/2):
-                print(op[n], end='')
+            elif (i==int(j/2)):
+                print(op[1], end='')
             else:
                 print('-', end='')
                 
         print("\n") #newline
+
         
-        ##print("哈哈哈，我没开发，别打我。。")
-        
+    def play(self):
+        n = self.__n
+        val = list.copy(self.__v)
+        opt = list.copy(self.__op)
+        first = int(input("choose the first arc to delete: "))
+        opt.pop(first)            
+        for i in range(1,first):
+            recordV = val[1]           #记录第一个数
+            recordOpt = opt[1]         #记录第一个操作符
+            for s in range(1,n):
+                if s == n-1:
+                    opt[s] = recordOpt
+                    continue
+                opt[s] = opt[s+1]
+            for j in range(1,n+1):    #从first点开始左移直到first 为第一个数
+                if j == n:
+                    val[j] = recordV
+                    continue
+                val[j] = val[j+1]
+        while(1):
+            print("the step is:")
+            self.showList(opt,val)
+            if len(val) == 2:
+                break
+            self.chanceAre(opt,val)
+            back = input("Do you want to back? (Y/N)")
+            if back =='Y':
+                if len(self.__memorystack) == 0:
+                    print("This is the first step",end='')
+                else:
+                    opt.clear()               #清空操作符集和变量集
+                    val.clear()
+                    memory = self.__memorystack.pop()    #将上一步记录弹出进行翻译
+                    print("last step is:")
+                    print(memory)
+                    opt.append('')
+                    val.append(0)
+                    topt = list()                 #建立翻译队列
+                    tval = list()
+                    self.translate2list(memory,topt,tval)
+                    opt = opt+topt
+                    val = val+tval
+                    print("back successfully!")
+    
+    def chanceAre(self,opt = [],val = []):
+        cut = int(input("choose the point you want to cut:"))
+        if opt[cut] == '+':
+            result = val[cut] + val[cut+1]
+        elif opt[cut] == '*':
+            result = val[cut] * val[cut+1]
+        opt.pop(cut)
+        val[cut] = result
+        val.pop(cut+1)
+
+    def translate2list(self,str = "",opt = [],val = []):
+        topt = opt     
+        tval = val
+        memeryList = list(str.split())     #将字符串记录转化成List
+        memeryListLen = int((len(memeryList)+1)/2) 
+        for i in range(0,memeryListLen):
+            tval.append(int(memeryList[2*i]))
+            if (i!=0) :
+                topt.append(memeryList[2*i-1])
+
+
 
 if __name__ == "__main__":
-    n = int(input("Please ENTER value of n:\n")) #多边形的边数n
-    
+    mode = int(input("which mode do you choose? 0--手动输入 1--自动生成:"))
+    allopt = ['+','*']
+    if mode == 0:
+        n = int(input("Please ENTER value of n:\n")) #多边形的边数n
+    if mode == 1:
+        n = random.randint(2,10)
     #数组初始化
     m = np.zeros((n+1, n+1, 2)) #type(m)), ndarray class
     op = [''for i in range(n+1)]
     val = [0 for i in range(n+1)]
-    
-    val_str = input("Please ENTER a value string starting with val \n") 
-    
-    str = list(val_str.split()) #字符串转化成list数组
-    str_len = len(val_str.replace(' ', '')) #计算去空格后的字符串len
-    
-    #print(val_str,str,str_len) #str_len
-    
-    for i in range(n):
-        op[i+1] = str[2*i] 
-        val[i+1] = int(str[2*i+1])
-    
-    #print(op, val) #打印op,val
+    if mode == 1:
+        str_len = 0
+        for i in range(1,n+1):
+            op[i] = (allopt[random.randint(0,1)])
+            val[i] = (random.randint(-10,10))
+            str_len = str_len+len(str(val[i]))+1
+    if mode == 0:
+        val_str = input("Please ENTER a value string starting with val \n") 
+        
+        strlist = list(val_str.split()) #字符串转化成list数组
+        str_len = len(val_str.replace(' ', '')) #计算去空格后的字符串len
+        
+        #print(val_str,str,str_len) #str_len
+        
+        for i in range(n):
+            op[i+1] = strlist[2*i] 
+            val[i+1] = int(strlist[2*i+1])
+        
+    print(op, val) #打印op,val
     
     polygon = PolygonAgent(n, m, op, val)  #生成对象
     print("\n\nPolygon:")  
+    #print(str_len)
     polygon.showPolygon(str_len)
-    
-    '''
-    for i in range(1, n+1): #i value taken from 1 to n
-        m[i][1][0] = m[i][1][1] = val[i]
-        
-    result = polygon.polyMax()
-    print("BestScore=", result)
-    '''
-    print("hahaha")
+    print("Play start")
+    polygon.play()
+    bestresult = input("if need show the best score? （Y/N）")
+    if(bestresult == 'Y'):
+            for i in range(1, n+1): #i value taken from 1 to n
+                m[i][1][0] = m[i][1][1] = val[i] 
+            result = polygon.polyMax()
+            print("BestScore=", result)
 
-
-'''
-to 凌峰: 5/29
-写了main方法
-我把showpolygon方法写了，测试没问题了。
-但是，
-测试下添麟写的核心代码polyMax（）里面有问题，
-陷入死循环，估计翻译代码时候，有些bug。
-
-而且，不好意思，我没把你写的数据结构加上去，
-为了省时间，急着测下添麟的代码
-因为添麟的数据结构，直接抄CSDN那个数据结构，
-所以，好搞些。
-
-我大致看了你的数据结构，
-大概差不多，如果你有什么特别需求，
-可后期在这里修改下数据结构
-
-written by 子杰
-
-```

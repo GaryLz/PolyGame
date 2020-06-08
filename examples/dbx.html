@@ -1,0 +1,546 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+    </style>
+</head>
+<body>
+<script src="https://libs.baidu.com/jquery/2.0.0/jquery.js"></script>
+<script type="text/javascript">
+var game = {
+    ring:new Array(),
+    op:new Array(),
+    max_int:100,
+    min_int:-100,
+    action_list:new Array(),
+    init:function(n){
+        var ring = new Array(n)
+        for(var i=0; i<n; ++i){
+            ring[i] = Math.floor(Math.random()*(this.max_int-this.min_int)+this.min_int)
+        }
+        var op = new Array(n)
+        var ops = ['+', '*']
+        for(var i=0; i<n; ++i){
+            op[i] = ops[Math.floor(Math.random()*(ops.length))]
+        }
+        this.ring = ring
+        this.op = op
+        this.action_list = new Array()
+    },
+    use_edge:function(edge){
+        if(!(this.action_list.indexOf(edge)>-1)){
+            this.action_list.push(edge)
+            return true
+        }
+        else{
+            return false
+        }
+    },
+    go_back:function(){
+        if(this.action_list.length>0){
+            this.action_list.pop()
+            return true
+        }
+        return false
+    },
+    use_op:function (op, a, b){
+        if(op=='+'){
+            return a+b
+        }
+        else if(op=='*'){
+            return a*b
+        }
+        return undefined
+    },
+    get_data:function(){
+        node = {}
+        for(var i=0; i<this.ring.length; ++i){
+            node[i] = this.ring[i]
+        }
+        edge = {}
+        for(var i=0; i<this.ring.length-1; ++i){
+            edge[i] = [i, i+1, this.op[i]]
+            // edge[i] = {
+            //     node:[i, i+1],
+            //     op:this.op[i]
+            // }
+        }
+        edge[this.ring.length-1] = [this.ring.length-1, 0, this.op[this.ring.length-1]]
+        // edge[this.ring.length-1] = {
+        //     node:[this.ring.length-1, 0],
+        //     op:this.op[this.ring.length-1]
+        // }
+        var use_op = this.use_op
+        function use_edge(id){
+            p1 = edge[id][0]
+            p2 = edge[id][1]
+            op = edge[id][2]
+            // p1 = edge[id].node[0]
+            // p2 = edge[id].node[1]
+            // op = edge[id].op
+            node[p1] = use_op(op, node[p1], node[p2])
+            delete edge[id]
+            delete node[p2]
+            for(e in edge){
+                for(var i=0; i<2; ++i){
+                    if (edge[e][i]==p2){
+                        edge[e][i] = p1;
+                        return
+                    }
+                    // if (edge[e].node[i]==p2){
+                    //     edge[e].node[i] = p1;
+                    //     return
+                    // }
+                }
+            }
+            return
+        }
+        if(this.action_list.length == 0){
+            return {
+                'node':node,
+                'edge':edge
+            }
+        }
+        delete edge[this.action_list[0]]
+        for(var i=1; i<this.action_list.length; ++i){
+            use_edge(this.action_list[i])
+        }
+        return {
+            'node':node,
+            'edge':edge
+        }
+    },
+    get_best_answer:function(){
+        var here = this
+        var ans = []
+        var memory = {}
+        function get(here, fe, b, e, i){
+            if(here.op[(fe+b+i)%here.ring.length] == '+'){
+                return [foo(fe, b, b+i)+foo(fe, b+i, e), foo, foo, i]
+            }
+            else{
+                var f1 = foo
+                var f2 = foo
+                var v1 = foo(fe, b, b+i)*foo(fe, b+i, e)
+                var v2 = foo1(fe, b, b+i)*foo1(fe, b+i, e)
+                if(v1<v2){
+                    v1 = v2
+                    f1 = foo1
+                    f2 = foo1
+                }
+                v2 = foo(fe, b, b+i)*foo1(fe, b+i, e)
+                if(v1<v2){
+                    v1 = v2
+                    f1 = foo
+                    f2 = foo1
+                }
+                v2 = foo1(fe, b, b+i)*foo(fe, b+i, e)
+                if(v1<v2){
+                    v1 = v2
+                    f1 = foo1
+                    f2 = foo
+                }
+                return [v1, f1, f2, i]
+            }
+        }
+        function foo(fe, b, e, arr){
+            if(e-b==1){
+                return here.ring[(fe+b+1)%here.ring.length] 
+            }
+            if([fe, b, e] in memory){
+                return memory[[fe, b, e]][0]
+            }
+            var max = get(here, fe, b, e, 1)
+            for(var i = 2; b+i<e; ++i){
+                var val = get(here, fe, b, e, i)
+
+                if(max[0]<val[0]){
+                    max = val
+                }
+            }
+            memory[[fe, b, e]] = max
+            return max[0]
+        }
+        var memory1 = {}
+        function get1(here, fe, b, e, i){
+            if(here.op[(fe+b+i)%here.ring.length] == '+'){
+                return [foo1(fe, b, b+i)+foo1(fe, b+i, e), foo1, foo1, i]
+            }
+            else{
+                var f1 = foo
+                var f2 = foo
+                var v1 = foo(fe, b, b+i)*foo(fe, b+i, e)
+                var v2 = foo1(fe, b, b+i)*foo1(fe, b+i, e)
+                if(v1>v2){
+                    v1 = v2
+                    f1 = foo1
+                    f2 = foo1
+                }
+                v2 = foo(fe, b, b+i)*foo1(fe, b+i, e)
+                if(v1>v2){
+                    v1 = v2
+                    f1 = foo
+                    f2 = foo1
+                }
+                v2 = foo1(fe, b, b+i)*foo(fe, b+i, e)
+                if(v1>v2){
+                    v1 = v2
+                    f1 = foo1
+                    f2 = foo
+                }
+                return [v1, f1, f2, i]
+            }
+        }
+        function foo1(fe, b, e){
+            if(e-b==1){
+                return here.ring[(fe+b+1)%here.ring.length] 
+            }
+            if([fe, b, e] in memory1){
+                return memory1[[fe, b, e]][0]
+            }
+            var min = get1(here, fe, b, e, 1)
+            for(var i = 2; b+i<e; ++i){
+                var val = get1(here, fe, b, e, i)
+                if(min[0]>val[0]){
+                    min = val
+                }
+            }
+            memory1[[fe, b, e]] = min
+            return min[0]
+        }
+        var max = foo(0, 0, here.ring.length)
+        var fe = 0
+        for(var i = 1; i< here.ring.length; ++i){
+            var val = foo(i, 0, here.ring.length)
+            if(max<val){
+                max = val
+                fe = i
+            }
+        }
+        function foo2(fe, b, e, fun){
+            if(e-b==1){
+                return
+            }
+            var ix;
+            var m = memory1[[fe, b, e]]
+            if(fun == foo){
+                m = memory[[fe, b, e]]
+            }
+            ix = m[3]
+            foo2(fe, b, b+ix, m[1])
+            foo2(fe, b+ix, e, m[2])
+            ans.push((fe+b+ix)%here.ring.length)
+        }
+        ans.push(fe)
+        foo2(fe, 0 , here.ring.length, foo)
+        return ans
+    },
+    size:function(){
+        return this.ring.length;
+    }
+}
+</script>
+<script type="text/javascript">
+$(document).ready(function(){
+    page1.init()
+})
+
+var page1 = {
+    init:function() {
+        $("body").html('\
+        <div id="page1" style="position:absolute;  top:20%; height: 40%; left: 30%; width:50%">\
+        <h1>多边形游戏</h1><br/>开始游戏之前让我们先确定一下顶点的数目。<br/>\
+        <input id="text" type="text"/>\
+        <button onclick="page1.sumbit()">确定</button>\
+        </div>')
+    },
+    sumbit:function(){
+        var n = parseInt($("#text").val())
+        if(n){
+            if(n>2){
+                game.init(n)
+                $("body").empty()
+                page3.init()
+            }
+        }
+    }
+}
+
+var page2 = {
+    loc: NaN,
+    game_data:NaN,
+    mode:"normal",
+    best_ans:NaN,
+    init:function(){
+        $("body").html('\
+        <canvas id="myCanvas" style="border:1px solid #c3c3c3;">\
+            此浏览器不支持canvas。\
+        </canvas><br/><button onclick="page2.go_back()">撤销</button>\
+        <button id="btn" onclick="page2.answer()">揭晓答案</button><br/><h1></h1>\
+        ')
+        var canvas = $('#myCanvas')[0]
+        canvas.width = document.body.clientWidth*0.95
+        canvas.height = document.body.clientWidth*0.4
+
+        var small = canvas.width
+        if(small>canvas.height){
+            small = canvas.height
+        }
+
+        loc = new Array(game.size())
+        for(var i = 0; i<loc.length; ++i){
+            loc[i] = [canvas.width/2+small*0.4*Math.cos(i*2*3.14/loc.length),
+                canvas.height/2+small*0.4*Math.sin(i*2*3.14/loc.length)]
+        }
+        
+        this.best_ans = game.get_best_answer()
+        this.game_data = game.get_data()
+
+        $("#myCanvas").click(function(e){
+            var x = e.offsetX;
+            var y = e.offsetY;
+            for(ed in page2.game_data['edge']){
+                var p1 = page2.game_data['edge'][ed][0]
+                var p2 = page2.game_data['edge'][ed][1]
+                var x1 = loc[p1][0], y1 = loc[p1][1];
+                var x2 =loc[p2][0], y2 = loc[p2][1];
+                var v = ((x1+x2)/2-x)*((x1+x2)/2-x)+((y1+y2)/2-y)*((y1+y2)/2-y)
+                if(v<100){
+                    game.use_edge(parseInt(ed))
+                    page2.game_data = game.get_data()
+                    page2.update()
+                    return
+                }
+            }
+        })
+        page2.update()
+    },
+    update:function(){
+        var canvas = $('#myCanvas')[0]
+        var cxt = canvas.getContext('2d')
+        const r = 20
+        const offset = 10
+        cxt.clearRect(0,0,canvas.width,canvas.height);
+        cxt.font = 'bold 20px Arial';
+        for(n in page2.game_data['node']){
+            var x = loc[parseInt(n)][0]
+            var y = loc[parseInt(n)][1]
+            cxt.beginPath();
+            cxt.arc(x, y, r,0,Math.PI*2,true);
+            cxt.closePath();
+            cxt.stroke();
+            cxt.fillText(page2.game_data['node'][n].toString(), x-offset, y+offset)
+        }
+        
+        for(e in page2.game_data['edge']){
+            var p1 = page2.game_data['edge'][e][0]
+            var p2 = page2.game_data['edge'][e][1]
+            var op = page2.game_data['edge'][e][2]
+            cxt.beginPath();
+            cxt.moveTo(loc[p1][0], loc[p1][1]);
+            cxt.lineTo(loc[p2][0], loc[p2][1]);
+            cxt.stroke();
+            var x = (loc[p1][0]+loc[p2][0])/2
+            var y = (loc[p1][1]+loc[p2][1])/2
+            cxt.fillText(op, x-offset, y+offset)
+        }
+        if(this.mode == "answer"){
+            var right = true
+            for(var i=0;i<game.action_list.length; ++i){
+                if(game.action_list[i] != this.best_ans[i]){
+                    right = false
+                    break;
+                }
+            }
+            if(right){
+                if(game.action_list.length<this.best_ans.length){
+                    $("h1").empty()
+                    var next = this.best_ans[game.action_list.length]
+                    var p1 = page2.game_data['edge'][next][0]
+                    var p2 = page2.game_data['edge'][next][1]
+                    var x = (loc[p1][0]+loc[p2][0])/2
+                    var y = (loc[p1][1]+loc[p2][1])/2
+                    cxt.beginPath();
+                    cxt.arc(x, y, r,0,Math.PI*2,true);
+                    cxt.closePath();
+                    cxt.stroke();
+                    cxt.fillText("Click!", x, y)
+                }
+                else{
+                    $("h1").html("完成")
+                }
+            }
+            else{
+                $("h1").html("撤销上一步！！！")
+            }
+        }
+    },
+    go_back:function(){
+        game.go_back();
+        page2.game_data = game.get_data()
+        page2.update()
+    },
+    answer:function(){
+        if(this.mode == "normal"){
+            this.mode = "answer"
+            $("#btn").html("再让我试一试")
+        }
+        else if(this.mode == "answer"){
+            $("h1").empty()
+            this.mode = "normal"
+            $("#btn").html("揭晓答案")
+        }
+        this.update()
+    }
+}
+
+var page3 = {
+    init: function(){
+        $("body").html('\
+        <canvas id="myCanvas" style="border:1px solid #c3c3c3;">\
+            此浏览器不支持canvas。\
+        </canvas><br/><button onclick="page3.begin()">开始游戏</button>\
+        <br/><h1>在开始游戏之前，你可以修改游戏的顶点的值和边的符号。</h1><br/><div></div>\
+        ')
+        
+        var canvas = $('#myCanvas')[0]
+        canvas.width = document.body.clientWidth*0.95
+        canvas.height = document.body.clientWidth*0.4
+
+        this.loc = new Array(game.size())
+        var loc = this.loc;
+
+        var small = canvas.width
+        if(small>canvas.height){
+            small = canvas.height
+        }
+
+        for(var i = 0; i<loc.length; ++i){
+            loc[i] = [canvas.width/2+small*0.4*Math.cos(i*2*3.14/loc.length),
+                canvas.height/2+small*0.4*Math.sin(i*2*3.14/loc.length)]
+        }
+        this.game_data = game.get_data()
+        var page = this
+        $("#myCanvas").click(function(e){
+            page.onclick(e)
+        })
+        this.update()
+    },
+    onclick:function(e){
+        var x = e.offsetX;
+        var y = e.offsetY;
+        for(ed in this.game_data['edge']){
+            var p1 = this.game_data['edge'][ed][0]
+            var p2 = this.game_data['edge'][ed][1]
+            var loc = this.loc;
+            var x1 = loc[p1][0], y1 = loc[p1][1];
+            var x2 = loc[p2][0], y2 = loc[p2][1];
+            var v = ((x1+x2)/2-x)*((x1+x2)/2-x)+((y1+y2)/2-y)*((y1+y2)/2-y)
+            if(v<100){
+                this.select = {
+                    type: "edge",
+                    id: ed
+                }
+                this.update()
+                $("h1").html("你选择了一条边，请选择它的符号")
+                $("div").html('\
+                <select>\
+                <option value="+">+</option>\
+                <option value="*">*</option>\
+                </select>\
+                <button onclick="page3.edge()">确定</button>')
+                return
+            }
+        }
+        for(n in this.game_data['node']){
+            var loc = this.loc;
+            var x1 = loc[n][0], y1 = loc[n][1];
+            var v = (x1-x)*(x1-x)+(y1-y)*(y1-y)
+            if(v<100){
+                this.select = {
+                    type: "node",
+                    id: n
+                }
+                this.update()
+                $("h1").html("你选择了一个顶点，请输入它的值")
+                $("div").html('\
+                <input id="text" type="text"/>\
+                <button onclick="page3.node()">确定</button>')
+                return
+            }
+        }
+    },
+    update:function(){
+        var canvas = $('#myCanvas')[0]
+        var cxt = canvas.getContext('2d')
+        const r = 20
+        const offset = 10
+        var loc = this.loc
+        cxt.clearRect(0,0,canvas.width,canvas.height);
+        cxt.strokeStyle="black";
+        cxt.font = 'bold 20px Arial';
+        for(n in this.game_data['node']){
+            var x = loc[parseInt(n)][0]
+            var y = loc[parseInt(n)][1]
+            cxt.beginPath();
+            cxt.arc(x, y, r,0,Math.PI*2,true);
+            cxt.closePath();
+            cxt.stroke();
+            cxt.fillText(this.game_data['node'][n].toString(), x-offset, y+offset)
+        }
+        
+        for(e in this.game_data['edge']){
+            var p1 = this.game_data['edge'][e][0]
+            var p2 = this.game_data['edge'][e][1]
+            var op = this.game_data['edge'][e][2]
+            cxt.beginPath();
+            cxt.moveTo(loc[p1][0], loc[p1][1]);
+            cxt.lineTo(loc[p2][0], loc[p2][1]);
+            cxt.stroke();
+            var x = (loc[p1][0]+loc[p2][0])/2
+            var y = (loc[p1][1]+loc[p2][1])/2
+            cxt.fillText(op, x-offset, y+offset)
+        }
+
+        if(this.select){
+            var x = 0, y = 0;
+            if(this.select.type == "node"){
+                x = loc[this.select.id][0]
+                y = loc[this.select.id][1]
+            }
+            else if(this.select.type == "edge"){
+                var p1 = this.game_data['edge'][this.select.id][0]
+                var p2 = this.game_data['edge'][this.select.id][1]
+                x = (loc[p1][0]+loc[p2][0])/2
+                y = (loc[p1][1]+loc[p2][1])/2
+            }
+            cxt.strokeStyle="red";
+            cxt.beginPath();
+            cxt.arc(x, y, r,0,Math.PI*2,true);
+            cxt.closePath();
+            cxt.stroke();
+        }
+    },
+    edge:function(){
+        game.op[this.select.id] = $("select").val()
+        this.game_data = game.get_data()
+        this.update()
+    },
+    node:function(){
+        var n = parseInt($("#text").val())
+        if(n){
+            game.ring[this.select.id] = n
+            this.game_data = game.get_data()
+            this.update()
+        }
+    },
+    begin:function(){
+        $("body").empty()
+        page2.init()
+    }
+}
+
+</script>
+
+</body>
+</html>
